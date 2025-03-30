@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const { messages } = await request.json();
 
-    console.log('...messages...', messages);
+    console.log('...mesage...', messages)
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -15,8 +15,10 @@ export async function POST(request: Request) {
       );
     }
 
+    // Convert messages to the format expected by Gemini API
     const prompt = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
 
+    // Prepare the request body according to Gemini API specifications
     const requestBody = {
       contents: [{
         parts: [{
@@ -25,95 +27,62 @@ export async function POST(request: Request) {
       }],
       generationConfig: {
         temperature: 0.7,
-        maxOutputTokens: 500, // Reduced token limit
-      }
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 2048,
+      },
+      safetySettings: [
+        {
+          category: "HARM_CATEGORY_HARASSMENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_HATE_SPEECH",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        },
+        {
+          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
+          threshold: "BLOCK_MEDIUM_AND_ABOVE"
+        }
+      ]
     };
 
-    console.log('Request Body:', requestBody);
+    // Make direct API call to Gemini
+    // const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GOOGLE_API_KEY}`, {
+    const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-    if (!process.env.GEMINI_API_KEY) {
-      console.warn('GEMINI_API_KEY is not set. Please configure it in your environment variables.');
-      return NextResponse.json(
-        { error: 'Internal server error: Missing API key' },
-        { status: 500 }
-      );
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error?.message || 'Failed to generate response');
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 9500); // 9.5 seconds
+    const data = await response.json();
 
-    try {
-      const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
-      });
+    console.log('...data in chat/route.tsx...', data)
+    
+    // Extract the generated text from the response
+    const generatedText = data.candidates[0].content.parts[0].text;
 
-      clearTimeout(timeoutId);
+    return NextResponse.json({ 
+      message: generatedText,
+      role: 'assistant'
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to generate response');
-      }
-
-      const data = await response.json();
-      console.log('Gemini API Response:', data);
-
-      if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
-        console.error('Invalid or empty response from Gemini API:', data);
-        return NextResponse.json(
-          { error: 'Failed to generate a valid response' },
-          { status: 500 }
-        );
-      }
-
-      const generatedText = data.candidates[0].content.parts[0].text;
-
-      return NextResponse.json({
-        message: generatedText,
-        role: 'assistant',
-      });
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Gemini API request timed out.');
-        return NextResponse.json(
-          { error: 'The request to the Gemini API timed out. Please try again later.' },
-          { status: 504 } // 504 Gateway Timeout
-        );
-      }
-
-      if (error instanceof Error) {
-        console.error('Error in chat API:', error.message);
-        return NextResponse.json(
-          { error: error.message },
-          { status: 500 }
-        );
-      }
-
-      console.error('Unknown error occurred:', error);
-      return NextResponse.json(
-        { error: 'An unknown error occurred. Please try again later.' },
-        { status: 500 }
-      );
-    }
   } catch (error) {
-    if (error instanceof Error) {
-      console.error('Error in chat API:', error.message);
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
-    }
-
-    console.error('Unknown error occurred:', error);
+    console.error('Error in chat API:', error);
     return NextResponse.json(
-      { error: 'An unknown error occurred. Please try again later.' },
+      { error: error instanceof Error ? error.message : 'Failed to process chat request' },
       { status: 500 }
     );
   }
-}
+} 
