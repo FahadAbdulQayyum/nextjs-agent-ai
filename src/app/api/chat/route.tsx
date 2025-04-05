@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const { messages } = await request.json();
 
-    console.log('...mesage...', messages)
+    console.log('...messages...', messages);
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
@@ -15,10 +15,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Convert messages to the format expected by Gemini API
     const prompt = messages.map(msg => `${msg.role}: ${msg.content}`).join('\n');
 
-    // Prepare the request body according to Gemini API specifications
     const requestBody = {
       contents: [{
         parts: [{
@@ -51,33 +49,61 @@ export async function POST(request: Request) {
       ]
     };
 
-    // Make direct API call to Gemini
-    // const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GOOGLE_API_KEY}`, {
-    const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    console.log('Request Body:', requestBody);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Failed to generate response');
+    if (!process.env.GEMINI_API_KEY) {
+      console.warn('GEMINI_API_KEY is not set. Please configure it in your environment variables.');
+      return NextResponse.json(
+        { error: 'Internal server error: Missing API key' },
+        { status: 500 }
+      );
     }
 
-    const data = await response.json();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds
 
-    console.log('...data in chat/route.tsx...', data)
-    
-    // Extract the generated text from the response
-    const generatedText = data.candidates[0].content.parts[0].text;
+    try {
+      const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
 
-    return NextResponse.json({ 
-      message: generatedText,
-      role: 'assistant'
-    });
+      clearTimeout(timeoutId);
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to generate response');
+      }
+
+      const data = await response.json();
+      console.log('Gemini API Response:', data);
+
+      if (!data.candidates || !data.candidates[0]?.content?.parts[0]?.text) {
+        console.error('Invalid or empty response from Gemini API:', data);
+        return NextResponse.json(
+          { error: 'Failed to generate a valid response' },
+          { status: 500 }
+        );
+      }
+
+      const generatedText = data.candidates[0].content.parts[0].text;
+
+      return NextResponse.json({
+        message: generatedText,
+        role: 'assistant',
+      });
+    } catch (error) {
+      clearTimeout(timeoutId);
+      console.error('Error in chat API:', error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Failed to process chat request' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Error in chat API:', error);
     return NextResponse.json(
@@ -85,4 +111,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}
