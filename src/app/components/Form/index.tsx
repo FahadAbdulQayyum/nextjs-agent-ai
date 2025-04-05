@@ -50,7 +50,7 @@ export default function Form() {
           type="submit"
           disabled={loading}
         //   style={{ padding: '10px 20px' }}
-        className='bg-orange-400 w-full rounded hover:scale-105 duration-1000 p-2'
+        className='bg-commonColor w-full rounded hover:scale-105 duration-1000 p-2'
         >
           {loading ? 'Generating...' : 'Get Learning Plan'}
         </button>

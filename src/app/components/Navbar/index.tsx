@@ -3,7 +3,7 @@ import React from 'react';
 
 const Navbar = () => {
     return <div 
-        className='bg-orange-400 flex text-center items-center px-standardPadding'
+        className='bg-commonColor flex text-center items-center px-standardPadding'
     >
     <Image
         // src={'/images/download.png'}

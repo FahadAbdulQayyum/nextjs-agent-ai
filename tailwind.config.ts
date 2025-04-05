@@ -25,6 +25,19 @@ const config: Config = {
   			]
   		},
   		colors: {
+			commonColor: '#ADB2D3', // elegant
+			// commonColor: '#9C7CA5', // great 
+			// commonColor: '#CDA2AB', // great 
+			// commonColor: '#8A89C0', // great 
+			// commonColor: '#048A81', // great 
+			// commonColor: '#7DCFB6', // great 
+			// commonColor: '#ECE4B7', // great 
+			// commonColor: '#FBD1A2', // great 
+			// commonColor: '#FC9F5B', // great 
+			// commonColor: '#66635B', // great 
+			// commonColor: '#A59E8C', // interesting 
+			// commonColor: '#93A8AC', // yeah, awesome 
+			// commonColor: '#90A583', // wow 
   			background: 'hsl(var(--background))',
   			textClr: '#737A91',
   			textClr2: '#585D6E',

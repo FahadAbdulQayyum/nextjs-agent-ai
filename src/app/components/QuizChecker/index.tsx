@@ -89,14 +89,14 @@ export default function QuizChecker() {
           placeholder="Enter your question or topic here..."
           value={textInput}
           onChange={handleTextChange}
-          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-orange-400"
+          className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-commonColor"
         /> */}
 
         {/* Submit Button */}
         <button
           type="submit"
           disabled={!file && !textInput.trim() && !loading}
-          className="w-full px-4 py-2 bg-orange-400 text-white rounded disabled:bg-gray-400"
+          className="w-full px-4 py-2 bg-commonColor text-white rounded disabled:bg-gray-400"
         >
           {loading ? "Checking Quiz..." : "Check Quiz"}
         </button>
