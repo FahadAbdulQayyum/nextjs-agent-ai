@@ -6,6 +6,8 @@ export async function POST(request: Request) {
   try {
     const { messages } = await request.json();
 
+    console.log('...mesage...', messages)
+
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json(
         { error: 'Messages array is required' },
