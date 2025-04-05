@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 seconds
+    const timeoutId = setTimeout(() => controller.abort(), 9000); // 9 seconds
 
     try {
       const response = await fetch(`${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`, {
@@ -98,16 +98,41 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       clearTimeout(timeoutId);
-      console.error('Error in chat API:', error);
+
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Gemini API request timed out.');
+        return NextResponse.json(
+          { error: 'The request to the Gemini API timed out. Please try again later.' },
+          { status: 504 } // 504 Gateway Timeout
+        );
+      }
+
+      if (error instanceof Error) {
+        console.error('Error in chat API:', error.message);
+        return NextResponse.json(
+          { error: error.message },
+          { status: 500 }
+        );
+      }
+
+      console.error('Unknown error occurred:', error);
       return NextResponse.json(
-        { error: error instanceof Error ? error.message : 'Failed to process chat request' },
+        { error: 'An unknown error occurred. Please try again later.' },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('Error in chat API:', error);
+    if (error instanceof Error) {
+      console.error('Error in chat API:', error.message);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    console.error('Unknown error occurred:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process chat request' },
+      { error: 'An unknown error occurred. Please try again later.' },
       { status: 500 }
     );
   }
